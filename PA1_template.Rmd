@@ -2,19 +2,100 @@
 
 
 ## Loading and preprocessing the data
+```{r}
 
+activity <- read.csv("activity.csv")
+# Convert all date strings to date 
+activity$date <- as.Date(activity$date,format ="%Y-%m-%d")
+
+# Total number of steps per interval
+interval <- aggregate(activity$steps,by=list(activity$interval),sum,na.rm=TRUE)
+names(interval) <- c("interval","steps")
+
+# Total number of steps per day
+day <- aggregate(activity$steps,by=list(activity$date),sum,na.rm=TRUE)
+names(day) <- c("date","tot.steps")
+
+
+# Mean number of steps per interval
+mean.interval <- aggregate(activity$steps,by=list(activity$interval),mean,na.rm=TRUE)
+names(mean.interval) <- c("interval","mean.steps")
+```
 
 
 ## What is mean total number of steps taken per day?
+```{r}
+# Histogram of the total number of steps taken perday
+hist(day$tot.steps,main="Histogram of total number of steps taken per day",xlab="Total Number of steps taken per day")
 
+mean(day$tot.steps,na.rm=TRUE)
+
+median(day$tot.steps,na.rm=TRUE)
+
+
+```
 
 
 ## What is the average daily activity pattern?
+```{r}
+plot(mean.interval$interval,mean.interval$mean.steps,type="n",main="Time Series Plot",xlab="5 min interval",ylab="Avg number of steps")
+lines(mean.interval$interval,mean.interval$mean.steps,type="l")
 
+# Maximum number of steps
+mean.interval[which.max(mean.interval$mean.steps),1]
+
+```
 
 
 ## Imputing missing values
 
+```{r}
+# Total number of missing values in the dataset
+sum(is.na(activity$steps))
 
+# Devise a stragegy for filling in missing values
+# I am planning to replace it with mean of the steps. Hence all the NA's are replaced by means.
+missingValues <- merge(activity,mean.interval,by="interval")
+missingValues$steps[is.na(missingValues$steps)] <- missingValues$mean.steps[is.na(missingValues$steps)]
+
+# create a new dataset which is equivalent ot original dataset
+# delete the row tha had been interoduced
+missingValues$mean.steps <- NULL
+newDataset <- missingValues[,c(2,3,1)]
+
+
+# Create a dataframe for total number of steps with the newly created dataframe
+newDay <- aggregate(newDataset$steps,by=list(newDataset$date),sum)
+names(newDay) <- c("day","tot.steps")
+
+# Create a histogram from the new dataset
+
+hist(newDay$tot.steps,main="Histogram of total number of steps taken per day",xlab="Total Number of steps taken per day")
+
+# Mean and Median of total number of steps taken perday
+
+mean(newDay$tot.steps)
+
+median(newDay$tot.steps)
+
+
+```
+Both Mean and the median has increased slightly
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r,warning=FALSE}
+# Create a factor variable with days of the week
+newDataset$day <- factor(weekdays(newDataset$date))
+levels(newDataset$day) <- list(weekday=c("Monday","Tuesday","Wednesday","Thursday","Friday"), weekend= c("Saturday","Sunday"))
+
+# Average number of steps taken 
+
+newDataset.mean <- aggregate(newDataset,by=list(newDataset$day,newDataset$interval),mean,na.rm=TRUE)
+names(newDataset.mean) <- c("weekday","interval","mean.steps","date","interval","day")
+
+library(lattice)
+xyplot(mean.steps ~ interval | weekday,newDataset.mean,layout=c(1,2),type="l",xlab="5 min Interval",ylab="Number of steps")
+
+```
+
